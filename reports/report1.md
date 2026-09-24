@@ -308,7 +308,7 @@ Sample Rate = 48 kHz
 
 #### 7.1. Скриншот схемы GNU Radio Companion
 
-![alt text](<Sxem_GNU.png>) 
+![alt text](<sxem_GNU.png>) 
 
 
 
