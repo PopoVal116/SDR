@@ -1,0 +1,3 @@
+/home/gajco/SDR/PlutoProject/build/CMakeFiles/main.dir
+/home/gajco/SDR/PlutoProject/build/CMakeFiles/edit_cache.dir
+/home/gajco/SDR/PlutoProject/build/CMakeFiles/rebuild_cache.dir
