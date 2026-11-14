@@ -16,10 +16,10 @@
 #define RX_FREQ_SDR2 700000000.0
 #define TX_FREQ_SDR2 790000000.0
 
-#define RX_GAIN 50.0
-#define TX_GAIN 40.0
+#define RX_GAIN 60.0
+#define TX_GAIN 60.0
 
-#define ITERATION_COUNT 200
+#define ITERATION_COUNT 100
 #define TIMEOUT_US 400000
 
 static volatile sig_atomic_t running = 1;
@@ -80,10 +80,11 @@ int main(int argc, char *argv[])
     int *bits = NULL;
     Complex *symbols = NULL;
     Complex *tx_signal = NULL;
-    size_t L = 64;
+    size_t L = 10;
     size_t symbol_count = 0;
     size_t bit_count = 0;
     size_t sample_count = 0;
+    FILE *sym_file = NULL;
 
     // Открытие выбранного SDR
     SoapySDRKwargs args = {};
@@ -203,7 +204,7 @@ int main(int argc, char *argv[])
         }
 
         symbol_count = tx_mtu / L;
-        bit_count = symbol_count * 2;
+        bit_count = symbol_count;
         sample_count = symbol_count * L;
 
         bits = (int *)malloc(bit_count * sizeof(int));
@@ -224,16 +225,20 @@ int main(int argc, char *argv[])
     {
         char filename[64];
         snprintf(filename, sizeof(filename), "%s_rxdata.pcm", sdr_id);
-
         file = fopen(filename, "wb");
-
-        if (file == NULL)
+        if (!file)
         {
-            perror("Не удалось открыть файл");
+            perror("pcm");
             return EXIT_FAILURE;
         }
 
-        printf("Приём записывается в %s\n", filename);
+        sym_file = fopen("qpsk_symbols.txt", "w"); // или sdr2_rx_symbols.txt
+        if (!sym_file)
+        {
+            perror("qpsk_symbols.txt");
+            return EXIT_FAILURE;
+        }
+        printf("RX txt → qpsk_symbols.txt\n");
     }
 
     printf("Работа началась\n");
@@ -251,8 +256,18 @@ int main(int argc, char *argv[])
                 size_t written = fwrite(rx_buffer, 2 * sizeof(int16_t), (size_t)sr, file);
                 if (written != (size_t)sr)
                 {
-                    fprintf(stderr, "Ошибка записи в файл\n");
+                    fprintf(stderr, "Ошибка записи в pcm\n");
                     return EXIT_FAILURE;
+                }
+            }
+
+            if (rx_mode && sym_file != NULL)
+            {
+                for (int i = 0; i < sr; i++)
+                {
+                    float I = (float)rx_buffer[2 * i];
+                    float Q = (float)rx_buffer[2 * i + 1];
+                    fprintf(sym_file, "%f %f\n", I, Q);
                 }
             }
 
@@ -270,63 +285,42 @@ int main(int argc, char *argv[])
 
             if (tx_mode)
             {
-                size_t phase = buffers_read % 40;
-                bool tx_on = (phase >= 2 && phase < 22);
 
-                if (tx_on)
+                /*for (size_t i = 0; i < tx_mtu; i++)
                 {
-                    if (phase == 2)
+                    if (i < 200)
                     {
-                        printf(" НАЧАЛО ПАКЕТА (буфер %zu) \n", buffers_read);
+                        tx_buff[2 * i] = 2000 << 4;
+                        tx_buff[2 * i + 1] = 2000 << 4;
                     }
-
-                    /*for (size_t i = 0; i < tx_mtu; i++)
+                    else
                     {
-                        if (i < 200)
-                        {
-                            tx_buff[2 * i] = 2000 << 4;
-                            tx_buff[2 * i + 1] = 2000 << 4;
-                        }
-                        else
-                        {
-                            tx_buff[2 * i] = 0;
-                            tx_buff[2 * i + 1] = 0;
-                        }
-                    }*/
-
-                    generate_bits(bits, bit_count);
-                    qpsk(bits, symbols, (int)bit_count);
-                    rectangular(symbols, tx_signal, (int)symbol_count, (int)L);
-
-                    for (size_t i = 0; i < 2 * tx_mtu; i++)
-                        tx_buff[i] = 0;
-
-                    for (size_t i = 0; i < sample_count; i++)
-                    {
-                        tx_buff[2 * i] = (int16_t)(tx_signal[i].I * 10000);
-                        tx_buff[2 * i + 1] = (int16_t)(tx_signal[i].Q * 10000);
+                        tx_buff[2 * i] = 0;
+                        tx_buff[2 * i + 1] = 0;
                     }
+                }*/
 
-                    void *tx_buffs[] = {tx_buff};
-                    int tx_flags = 0;
-                    long long tx_time = 0;
+                generate_bits(bits, bit_count);
+                bpsk(bits, symbols, bit_count);
+                rectangular(symbols, tx_signal, symbol_count, L);
+                for (size_t i = 0; i < 2 * tx_mtu; i++)
+                    tx_buff[i] = 0;
 
-                    int st = SoapySDRDevice_writeStream(
-                        sdr, txStream,
-                        (const void *const *)tx_buffs,
-                        tx_mtu, &tx_flags, tx_time, timeoutUs);
-
-                    if (st < 0 || (size_t)st != tx_mtu)
-                    {
-                        fprintf(stderr, "Ошибка передачи (TX Failed): %d\n", st);
-                    }
+                for (size_t i = 0; i < sample_count; i++)
+                {
+                    tx_buff[2 * i] = (int16_t)(tx_signal[i].I * 20000.0f);
+                    tx_buff[2 * i + 1] = (int16_t)(tx_signal[i].Q * 20000.0f);
                 }
-                else
+
+                void *tx_buffs[] = {tx_buff};
+                int tx_flags = 0;
+                long long tx_time = 0;
+
+                int st = SoapySDRDevice_writeStream(sdr, txStream, (const void *const *)tx_buffs, tx_mtu, &tx_flags, tx_time, timeoutUs);
+
+                if (st < 0 || (size_t)st != tx_mtu)
                 {
-                    if (phase == 22)
-                    {
-                        printf("КОНЕЦ ПАКЕТА (буфер %zu) \n", buffers_read);
-                    }
+                    fprintf(stderr, "Ошибка передачи (TX Failed): %d\n", st);
                 }
             }
 
@@ -338,7 +332,8 @@ int main(int argc, char *argv[])
 
     if (file != NULL)
         fclose(file);
-
+    if (sym_file != NULL)
+        fclose(sym_file);
     free(rx_buffer);
     free(tx_buff);
     free(bits);

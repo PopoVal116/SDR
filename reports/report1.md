@@ -308,7 +308,7 @@ Sample Rate = 48 kHz
 
 #### 7.1. Скриншот схемы GNU Radio Companion
 
-![alt text](<sxem_GNU.png>) 
+![alt text](<images/sxem_GNU.png>) 
 
 
 
@@ -317,7 +317,7 @@ Sample Rate = 48 kHz
 ---
 
 #### 7.2. Скриншот спектра при приёме станции
-![alt text](<wind_QT_GUI.png>)
+![alt text](<images/wind_QT_GUI.png>)
 
 **Рисунок 2 —  Скриншоты окон QT GUI (Time Sink и Frequency Sinks) при приёме станции 99.1 МГц**
 

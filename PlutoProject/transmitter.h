@@ -11,15 +11,25 @@ typedef struct
 
 void generate_bits(int *bits, int N)
 {
+    const char *msg = "hello";
+    int msg_len = 5;
+    int msg_bits = msg_len * 8;
+
     for (int i = 0; i < N; i++)
-        bits[i] = rand() % 2;
+    {
+        int pos = i % msg_bits;
+        int byte_index = pos / 8;
+        int bit_index = 7 - (pos % 8);
+
+        bits[i] = (msg[byte_index] >> bit_index) & 1;
+    }
 }
 
 void bpsk(int *bits, Complex *symbols, int N)
 {
     for (int i = 0; i < N; i++)
     {
-        symbols[i].I = bits[i] ? 1.0f : -1.0f;
+        symbols[i].I = bits[i] ? -1.0f : 1.0f;
         symbols[i].Q = 0.0f;
     }
 }
@@ -28,8 +38,8 @@ void qpsk(int *bits, Complex *symbols, int N)
 {
     for (int i = 0; i < N / 2; i++)
     {
-        symbols[i].I = bits[2 * i] ? 1.0f : -1.0f;
-        symbols[i].Q = bits[2 * i + 1] ? 1.0f : -1.0f;
+        symbols[i].I = bits[2 * i] ? -1.0f : 1.0f;
+        symbols[i].Q = bits[2 * i + 1] ? -1.0f : 1.0f;
     }
 }
 
