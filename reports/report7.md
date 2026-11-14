@@ -69,6 +69,6 @@ RX:  readStream → sdrX_rxdata.pcm
 ```
 
 QPSK-созвездие (Python)
-![alt text](<image/qpsk_mod.png>)
+![alt text](<images/qpsk_mod.png>)
 BPSK-созвездие (Python)
-![alt text](<image/bpsk_mod.png>)
+![alt text](<images/bpsk_mod.png>)
